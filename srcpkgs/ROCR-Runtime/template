@@ -1,0 +1,17 @@
+# Template file for 'ROCR-Runtime'
+pkgname=ROCR-Runtime
+version=5.6.0
+revision=1
+archs="x86_64"
+build_style=cmake
+configure_args="-B . -S ../src -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/rocm -DCMAKE_PREFIX_PATH=/opt/rocm -DCMAKE_INSTALL_LIBDIR=lib"
+hostmakedepends="pkg-config rocm-llvm xxd"
+makedepends="elfutils-devel ROCT-Thunk-Interface libdrm-devel ROCm-Device-Libs"
+# rocm-device-libs might be needed in depends?
+depends="ROCm-core"
+short_desc="HSA Runtime API and runtime for ROCm"
+maintainer="Erick Vilcica <erick.vilcica@protonmail.com>"
+license="NCSA"
+homepage="https://github.com/RadeonOpenCompute/ROCR-Runtime"
+distfiles="https://github.com/RadeonOpenCompute/ROCR-Runtime/archive/rocm-${version}.tar.gz"
+checksum=30875d440df9d8481ffb24d87755eae20a0efc1114849a72619ea954f1e9206c

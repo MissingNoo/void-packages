@@ -1,0 +1,72 @@
+# Template file for 'hipamd'
+pkgname=hipamd
+version=5.6.0
+revision=1
+archs="x86_64"
+build_style=cmake
+configure_args="-Wno-dev -B . -S /builddir/${pkgname}-${version}/clr-rocm-${version} -DHIP_COMMON_DIR=/builddir/${pkgname}-${version}/HIP-rocm-${version} -DHIP_PLATFORM=amd -DCMAKE_PREFIX_PATH=/opt/rocm -DHIPCC_BIN_DIR=/builddir/${pkgname}-${version}/HIPCC-rocm-${version}/build -DHIP_CATCH_TEST=0 -DCLR_BUILD_HIP=ON -DCLR_BUILD_OCL=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/rocm -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ -DCMAKE_LINKER=/opt/rocm/llvm/bin/ld.lld"
+hostmakedepends="perl rocm-llvm libnuma python3"
+makedepends="rocm-cmake zlib-devel ROCm-CompilerSupport ROCR-Runtime libnuma-devel python3-CppHeaderParser libglvnd-devel"
+depends="rocm-llvm perl rocminfo ROCm-core ROCm-Device-Libs"
+short_desc="Heterogeneous Interface for Portability ROCm"
+maintainer="Erick Vilcica <erick.vilcica@protonmail.com>"
+license="MIT"
+homepage="https://github.com/ROCm-Developer-Tools/HIP"
+distfiles="https://github.com/ROCm-Developer-Tools/HIP/archive/rocm-${version}.tar.gz>hip.tar.gz
+https://github.com/ROCm-Developer-Tools/clr/archive/rocm-${version}.tar.gz>clr.tar.gz
+https://github.com/ROCm-Developer-Tools/HIPCC/archive/rocm-${version}.tar.gz>hipcc.tar.gz"
+checksum="a8237768c1ae70029d972376f8d279f4de18a1e6106fff6215d1e16847bc375e
+8dcd99110737a294f67a805639cf372890c8ca16c7603caaa793e71e84478fe4
+fdb7fdc9e4648376120330f034ee8353038d34c8a015f9eb0c208c56eeddd097"
+python_version=3
+
+pre_configure() {
+	export HIP_DIR="$(readlink -f HIP-rocm-${version})"
+	export HIPCC_DIR="$(readlink -f HIPCC-rocm-${version})"
+
+	# Build HIPCC
+	cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -S ${HIPCC_DIR} -B ${HIPCC_DIR}/build -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ -DCMAKE_LINKER=/opt/rocm/llvm/bin/ld.lld
+	cmake --build ${HIPCC_DIR}/build --parallel ${XBPS_MAKEJOBS}
+}
+
+do_install() {
+	DESTDIR=${PKGDESTDIR} cmake --install build/hipamd
+}
+
+ROCclr_package() {
+	short_desc="ROCm Common Language Runtime"
+	depends="${sourcepkg}>=${version}_${revision}"
+	pkg_install() {
+		cd build/rocclr
+		vmkdir opt/rocm/rocclr
+		vmkdir opt/rocm/lib
+		vcopy librocclr.a opt/rocm/rocclr
+		ln -sfr ${PKGDESTDIR}/opt/rocm/rocclr/librocclr.a ${PKGDESTDIR}/opt/rocm/lib
+
+		cd ../../clr-rocm-${version}/rocclr
+		vlicense LICENSE.txt
+	}
+}
+
+ROCm-OpenCL-Runtime_package() {
+	short_desc="OpenCL runtime for ROCm"
+	depends="${sourcepkg}>=${version}_${revision} ocl-icd"
+	pkg_install() {
+		DESTDIR=${PKGDESTDIR} cmake --install build/opencl
+
+		vmkdir etc/OpenCL/vendors
+		echo "/opt/rocm/lib/libamdocl64.so" > ${PKGDESTDIR}/etc/OpenCL/vendors/amdocl64.icd
+
+		cd clr-rocm-${version}/opencl
+		vlicense LICENSE.txt
+	}
+}
+
+post_install() {
+	cd clr-rocm-${version}
+	vlicense LICENCE LICENSE-CLR
+	cd ../HIP-rocm-${version}
+	vlicense LICENSE.txt LICENSE-HIP
+	cd ../HIPCC-rocm-${version}
+	vlicense LICENSE.txt LICENSE-HIPCC
+}
